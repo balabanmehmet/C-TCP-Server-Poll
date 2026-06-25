@@ -1,0 +1,65 @@
+# TCP Sohbet Uygulaması (poll sürümü)
+
+C dili ve  soket API'si kullanılarak yazılmış basit bir terminal sohbet uygulaması.
+Bir **sunucu** ve bir **istemci** den oluşur; ikisi arasında çift yönlü mesajlaşma sağlar.
+
+## Özellikler
+
+- TCP üzerinden çift yönlü gerçek zamanlı mesajlaşma
+- `poll()` ile aynı anda hem klavyeyi (stdin) hem de soketi dinleme — bloklama yok
+- Bağlantı kapanışlarının düzgün yönetimi (temiz kapanış vs. gerçek hata ayrımı)
+- Harici bağımlılık yok; sadece standart C ve POSIX kütüphaneleri
+
+## Dosyalar
+
+| Dosya | Açıklama |
+|-------|----------|
+| `server.c` | Sunucu: `socket → bind → listen → accept → poll` döngüsü |
+| `client.c` | İstemci: `socket → connect → poll` döngüsü |
+
+## Derleme
+
+```bash
+gcc -Wall -Wextra -o server server.c
+gcc -Wall -Wextra -o client client.c
+```
+
+## Çalıştırma
+
+Önce **sunucuyu** başlat:
+
+```bash
+./server
+# Sunucu 8080 portunda dinliyor... istemci bekleniyor.
+```
+
+Ardından başka bir terminalde **istemciyi** çalıştır:
+
+```bash
+./client                # varsayılan: 127.0.0.1
+./client 192.168.1.10   # ya da sunucunun IP adresini ver
+```
+
+Her iki tarafta da klavyeden yazıp Enter'a bastığında mesaj karşı tarafa iletilir.
+Çıkmak için `Ctrl+D` (EOF) kullanılır.
+
+## Nasıl Çalışır?
+
+Her iki program da `poll()` ile iki dosya tanımlayıcısını aynı anda izler:
+
+- **fd 0** → klavye (stdin): okunan satır karşı tarafa `send()` ile gönderilir
+- **soket** → karşı taraftan gelen veriyi `recv()` ile okuyup ekrana basar
+
+`poll()` hangisi hazırsa onu bildirdiği için program tek bir thread ile hem yazıp
+hem dinleyebilir; herhangi bir işlem diğerini bloklamaz.
+
+Varsayılan port: **8080** (`PORT` makrosundan değiştirilebilir).
+
+## Geliştirme Notları
+
+- Bu proje aslında `select()` ile yazılmış bir örnekten yola çıkılarak, G/Ç çoklama
+  yapısı tarafımdan **`poll()`'a dönüştürülerek** yeniden yazılmıştır.
+- Öğrenme sürecinde yapay zekâ destekli araçlardan yararlanılmıştır; kod satır satır
+  incelenip anlaşılarak düzenlenmiştir.
+
+
